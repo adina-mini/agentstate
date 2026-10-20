@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentGate — Enterprise MCP Knowledge Gateway</title>
+    <meta name="description" content="AgentGate bridges enterprise knowledge bases with AI agent environments via MCP, LangGraph multi-agent retrieval, and real-time evals.">
+    <!-- Google Fonts: Source Serif 4 & IBM Plex Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="top-nav">
+        <div class="nav-brand">
+            <div class="brand-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <path d="M7 8h10"/>
+                    <path d="M7 12h10"/>
+                    <path d="M7 16h6"/>
+                </svg>
+            </div>
+            <div class="brand-text">
+                <h1>AgentGate</h1>
+                <span class="brand-tag">Knowledge Gateway</span>
+            </div>
+        </div>
+
+        <nav class="nav-tabs" role="tablist">
+            <button class="tab-btn active" id="tab-playground-btn" data-tab="playground" role="tab" aria-selected="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                </svg>
+                Playground
+            </button>
+            <button class="tab-btn" id="tab-benchmark-btn" data-tab="benchmark" role="tab" aria-selected="false">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="20" x2="18" y2="10"/>
+                    <line x1="12" y1="20" x2="12" y2="4"/>
+                    <line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+                Benchmark
+            </button>
+            <button class="tab-btn" id="tab-sources-btn" data-tab="sources" role="tab" aria-selected="false">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+                Sources
+            </button>
+            <button class="tab-btn" id="tab-mcp-btn" data-tab="mcp" role="tab" aria-selected="false">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+                    <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+                    <line x1="6" y1="6" x2="6.01" y2="6"/>
+                    <line x1="6" y1="18" x2="6.01" y2="18"/>
+                </svg>
+                MCP Gateway
+            </button>
+            <button class="tab-btn" id="tab-evals-btn" data-tab="evals" role="tab" aria-selected="false">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+                Telemetry
+            </button>
+        </nav>
+
+        <div class="nav-status">
+            <span class="status-indicator live" id="system-status-indicator"></span>
+            <span class="status-label" id="system-status-text">Connected</span>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-content">
+
+        <!-- TAB 1: Agent Playground -->
+        <section class="tab-panel active" id="tab-playground" role="tabpanel">
+            <div class="panel-header">
+                <div>
+                    <h2>Multi-Agent Query Console</h2>
+                    <p class="panel-subtitle">Execute LangGraph multi-agent retrieval with intent routing, hybrid search, and citation grounding.</p>
+                </div>
+                <div class="quick-examples">
+                    <span class="examples-label">Suggested:</span>
+                    <button class="example-chip" data-query="How is authentication and rate limiting configured?">Auth & Limits</button>
+                    <button class="example-chip" data-query="What is the architecture and core layers of AgentGate?">Architecture</button>
+                    <button class="example-chip" data-query="How does evaluation and RAG quality benchmarking work?">RAG Benchmarking</button>
+                </div>
+            </div>
+
+            <!-- Query Input Bar -->
+            <div class="query-box glass-panel">
+                <div class="query-input-wrap">
+                    <textarea id="query-input" rows="2" placeholder="Ask a question about connected codebases, specifications, or internal docs..."></textarea>
+                </div>
+                <div class="query-controls">
+                    <div class="controls-left">
+                        <div class="strategy-selector" role="radiogroup" aria-label="Retrieval Strategy">
+                            <label class="strategy-option active" data-strategy="hybrid">
+                                <input type="radio" name="strategy" value="hybrid" checked>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                                    <polyline points="2 17 12 22 22 17"/>
+                                    <polyline points="2 12 12 17 22 12"/>
+                                </svg>
+                                <span>Hybrid (RRF)</span>
+                            </label>
+                            <label class="strategy-option" data-strategy="dense">
+                                <input type="radio" name="strategy" value="dense">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+                                    <path d="M2 12h20"/>
+                                </svg>
+                                <span>Dense Vectors</span>
+                            </label>
+                            <label class="strategy-option" data-strategy="sparse">
+                                <input type="radio" name="strategy" value="sparse">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="4" y1="9" x2="20" y2="9"/>
+                                    <line x1="4" y1="15" x2="20" y2="15"/>
+                                    <line x1="10" y1="3" x2="8" y2="21"/>
+                                    <line x1="16" y1="3" x2="14" y2="21"/>
+                                </svg>
+                                <span>BM25 Sparse</span>
+                            </label>
+                        </div>
+
+                        <div class="top-k-wrapper">
+                            <label for="top-k-input">Top-K:</label>
+                            <span id="top-k-val" class="val-badge">3</span>
+                            <input type="range" id="top-k-input" min="1" max="10" value="3">
+                        </div>
+                    </div>
+
+                    <button id="submit-query-btn" class="primary-btn">
+                        <span>Execute Query</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                            <polyline points="12 5 19 12 12 19"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results View -->
+            <div id="query-result-container" class="query-result-card glass-panel hidden">
+                <div class="result-header">
+                    <div class="result-meta">
+                        <span id="res-intent-badge" class="badge badge-purple">Intent: Knowledge</span>
+                        <span id="res-strategy-badge" class="badge badge-blue">Hybrid RRF</span>
+                        <span id="res-latency-badge" class="badge badge-muted">Latency: 0ms</span>
+                        <span id="res-tokens-badge" class="badge badge-muted">Tokens: 0</span>
+                        <span id="res-cost-badge" class="badge badge-muted">Cost: $0.00</span>
+                    </div>
+                    <div class="confidence-indicator">
+                        <span class="confidence-label">Confidence:</span>
+                        <div class="confidence-track">
+                            <div id="res-confidence-fill" class="confidence-fill" style="width: 0%;"></div>
+                        </div>
+                        <span id="res-confidence-val" class="confidence-val">0%</span>
+                    </div>
+                </div>
+
+                <div class="result-body">
+                    <h3 class="section-title">Synthesized Grounded Answer</h3>
+                    <div id="res-answer-text" class="answer-content"></div>
+                </div>
+
+                <div class="citations-section">
+                    <h4 class="citations-title">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                        Retrieved Context Citations (<span id="citation-count">0</span>)
+                    </h4>
+                    <div id="citations-grid" class="citations-grid"></div>
+                </div>
+            </div>
+
+            <!-- Empty State / Workflow explainer -->
+            <div id="playground-empty-state" class="empty-state glass-panel">
+                <div class="workflow-steps">
+                    <div class="step-card">
+                        <div class="step-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                            </svg>
+                        </div>
+                        <h4>Router Agent</h4>
+                        <p>Classifies incoming query intent in &lt;10ms, screening conversational queries from knowledge retrieval.</p>
+                    </div>
+                    <div class="step-connector">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                            <polyline points="12 5 19 12 12 19"/>
+                        </svg>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                                <polyline points="2 17 12 22 22 17"/>
+                                <polyline points="2 12 12 17 22 12"/>
+                            </svg>
+                        </div>
+                        <h4>Hybrid Retriever</h4>
+                        <p>Combines dense semantic vectors and sparse BM25 matches using Reciprocal Rank Fusion.</p>
+                    </div>
+                    <div class="step-connector">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                            <polyline points="12 5 19 12 12 19"/>
+                        </svg>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                                <line x1="12" y1="22.08" x2="12" y2="12"/>
+                            </svg>
+                        </div>
+                        <h4>Synthesizer Agent</h4>
+                        <p>Generates context-grounded response with strict citation attribution and verification.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: Strategy Benchmark Arena -->
+        <section class="tab-panel" id="tab-benchmark" role="tabpanel">
+            <div class="panel-header">
+                <div>
+                    <h2>Retrieval Strategy Benchmark</h2>
+                    <p class="panel-subtitle">Benchmark Dense vs. Sparse vs. Hybrid RRF retrieval side-by-side on Context Relevance, Faithfulness, and Latency.</p>
+                </div>
+                <button id="run-benchmark-btn" class="primary-btn">
+                    <span>Run Benchmark</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="benchmark-query-bar glass-panel">
+                <label for="benchmark-query-input">Benchmark Query:</label>
+                <input type="text" id="benchmark-query-input" value="How is authentication and rate limiting configured?">
+            </div>
+
+            <!-- Comparison Cards Grid -->
+            <div id="benchmark-cards-grid" class="benchmark-cards-grid">
+                <!-- Dense Card -->
+                <div class="benchmark-card glass-panel" id="dense-card">
+                    <div class="card-badge badge-blue">Dense Only</div>
+                    <h3>Semantic Vector Search</h3>
+                    <p class="card-desc">SentenceTransformers all-MiniLM-L6-v2 embeddings with cosine similarity in ChromaDB.</p>
+                    <div class="metric-group">
+                        <div class="metric-row">
+                            <span>Context Relevance</span>
+                            <span class="metric-val" id="dense-relevance">0.74</span>
+                        </div>
+                        <div class="metric-bar"><div class="metric-fill bg-blue" id="dense-relevance-fill" style="width: 74%;"></div></div>
+
+                        <div class="metric-row">
+                            <span>Faithfulness</span>
+                            <span class="metric-val" id="dense-faithfulness">0.76</span>
+                        </div>
+                        <div class="metric-bar"><div class="metric-fill bg-blue" id="dense-faithfulness-fill" style="width: 76%;"></div></div>
+
+                        <div class="metric-row">
+                            <span>Latency (p50)</span>
+                            <span class="metric-val" id="dense-latency">~120ms</span>
+                        </div>
+                    </div>
+                    <div class="card-tag">Best for: Conceptual & semantic questions</div>
+                </div>
+
+                <!-- Sparse Card -->
+                <div class="benchmark-card glass-panel" id="sparse-card">
+                    <div class="card-badge badge-amber">Sparse Only</div>
+                    <h3>BM25 Keyword Matching</h3>
+                    <p class="card-desc">Okapi BM25 sparse index matching exact identifiers, function names, and error codes.</p>
+                    <div class="metric-group">
+                        <div class="metric-row">
+                            <span>Context Relevance</span>
+                            <span class="metric-val" id="sparse-relevance">0.69</span>
+                        </div>
+                        <div class="metric-bar"><div class="metric-fill bg-amber" id="sparse-relevance-fill" style="width: 69%;"></div></div>
+
+                        <div class="metric-row">
+                            <span>Faithfulness</span>
+                            <span class="metric-val" id="sparse-faithfulness">0.71</span>
+                        </div>
+                        <div class="metric-bar"><div class="metric-fill bg-amber" id="sparse-faithfulness-fill" style="width: 71%;"></div></div>
+
+                        <div class="metric-row">
+                            <span>Latency (p50)</span>
+                            <span class="metric-val" id="sparse-latency">~40ms</span>
+                        </div>
+                    </div>
+                    <div class="card-tag">Best for: Exact symbol & keyword lookups</div>
+                </div>
+
+                <!-- Hybrid Card -->
+                <div class="benchmark-card glass-panel featured-card" id="hybrid-card">
+                    <div class="card-badge badge-emerald">Hybrid RRF</div>
+                    <h3>Reciprocal Rank Fusion</h3>
+                    <p class="card-desc">Blends dense vector embeddings with BM25 keyword rankings using RRF with k=60.</p>
+                    <div class="metric-group">
+                        <div class="metric-row">
+                            <span>Context Relevance</span>
+                            <span class="metric-val highlight" id="hybrid-relevance">0.86</span>
+                        </div>
+                        <div class="metric-bar"><div class="metric-fill bg-emerald" id="hybrid-relevance-fill" style="width: 86%;"></div></div>
+
+                        <div class="metric-row">
+                            <span>Faithfulness</span>
+                            <span class="metric-val highlight" id="hybrid-faithfulness">0.88</span>
+                        </div>
+                        <div class="metric-bar"><div class="metric-fill bg-emerald" id="hybrid-faithfulness-fill" style="width: 88%;"></div></div>
+
+                        <div class="metric-row">
+                            <span>Latency (p50)</span>
+                            <span class="metric-val" id="hybrid-latency">~170ms</span>
+                        </div>
+                    </div>
+                    <div class="card-tag featured-tag">Production Default: Balanced Performance</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: Knowledge Sources -->
+        <section class="tab-panel" id="tab-sources" role="tabpanel">
+            <div class="panel-header">
+                <div>
+                    <h2>Knowledge Sources</h2>
+                    <p class="panel-subtitle">Manage ingested GitHub repositories, Markdown documentation, and engineering specs.</p>
+                </div>
+                <div class="header-actions">
+                    <button id="seed-sample-btn" class="secondary-btn">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Load Sample Specs
+                    </button>
+                    <button id="add-source-btn" class="primary-btn">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"/>
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        Connect Source
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ingestion Modal / Card -->
+            <div id="source-modal" class="modal-backdrop hidden">
+                <div class="modal-box glass-panel">
+                    <div class="modal-header">
+                        <h3>Connect Knowledge Source</h3>
+                        <button id="close-modal-btn" class="close-icon-btn">&times;</button>
+                    </div>
+                    <div class="modal-tabs">
+                        <button class="modal-tab-btn active" id="modal-tab-github" data-target="github-form">GitHub Repository</button>
+                        <button class="modal-tab-btn" id="modal-tab-file" data-target="file-form">Upload File</button>
+                    </div>
+
+                    <!-- GitHub Form -->
+                    <form id="github-form" class="modal-form">
+                        <div class="form-group">
+                            <label for="gh-repo-input">GitHub Repository (owner/repo):</label>
+                            <input type="text" id="gh-repo-input" placeholder="e.g. adina-mini/agentgate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="gh-token-input">Personal Access Token (optional for private repos):</label>
+                            <input type="password" id="gh-token-input" placeholder="ghp_...">
+                        </div>
+                        <button type="submit" id="submit-gh-btn" class="primary-btn full-width">Sync Repository</button>
+                    </form>
+
+                    <!-- File Upload Form -->
+                    <form id="file-form" class="modal-form hidden">
+                        <div class="form-group">
+                            <label for="doc-file-input">Select Markdown or Text Document:</label>
+                            <input type="file" id="doc-file-input" accept=".md,.markdown,.txt" required>
+                        </div>
+                        <button type="submit" id="submit-file-btn" class="primary-btn full-width">Upload & Index Document</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Sources List Grid -->
+            <div id="sources-grid" class="sources-grid">
+                <div class="loading-spinner-wrap">
+                    <div class="spinner"></div>
+                    <p>Loading connected sources...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: MCP Gateway -->
+        <section class="tab-panel" id="tab-mcp" role="tabpanel">
+            <div class="panel-header">
+                <div>
+                    <h2>Model Context Protocol Gateway</h2>
+                    <p class="panel-subtitle">Native MCP Stdio and SSE endpoints exposing enterprise knowledge tools to Claude Desktop, Cursor, and custom agents.</p>
+                </div>
+                <span class="badge badge-emerald">FastMCP 1.0</span>
+            </div>
+
+            <div class="mcp-grid">
+                <!-- Claude Config Card -->
+                <div class="mcp-card glass-panel">
+                    <div class="mcp-card-header">
+                        <h3>Claude Desktop Integration</h3>
+                        <button id="copy-claude-config-btn" class="secondary-btn small-btn">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                            </svg>
+                            Copy JSON Config
+                        </button>
+                    </div>
+                    <p class="mcp-desc">Add this snippet to your <code>claude_desktop_config.json</code>:</p>
+                    <pre class="code-block" id="claude-config-code"><code>{
+  "mcpServers": {
+    "agentgate": {
+      "command": "python",
+      "args": ["-m", "agentgate.mcp_server.server"],
+      "env": {
+        "GROQ_API_KEY": "gsk_your_groq_api_key"
+      }
+    }
+  }
+}</code></pre>
+                </div>
+
+                <!-- Exposed MCP Tools List -->
+                <div class="mcp-card glass-panel">
+                    <h3>Exposed MCP Tools & Resources</h3>
+                    <div class="tool-list">
+                        <div class="tool-item">
+                            <div class="tool-badge">Tool</div>
+                            <div class="tool-details">
+                                <code>search_knowledge(query: str, top_k: int = 5)</code>
+                                <p>Search enterprise codebase documentation, architectural specs, and guidelines.</p>
+                            </div>
+                        </div>
+                        <div class="tool-item">
+                            <div class="tool-badge">Tool</div>
+                            <div class="tool-details">
+                                <code>list_sources()</code>
+                                <p>Lists all currently synced repositories, docs, and specs.</p>
+                            </div>
+                        </div>
+                        <div class="tool-item">
+                            <div class="tool-badge">Tool</div>
+                            <div class="tool-details">
+                                <code>get_document(doc_id: str)</code>
+                                <p>Retrieves the full content and metadata for a specific document ID.</p>
+                            </div>
+                        </div>
+                        <div class="tool-item">
+                            <div class="tool-badge resource-badge">Resource</div>
+                            <div class="tool-details">
+                                <code>knowledge://stats</code>
+                                <p>Live system telemetry: total indexed chunks, connected sources, and health.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 5: Live Evals & Telemetry -->
+        <section class="tab-panel" id="tab-evals" role="tabpanel">
+            <div class="panel-header">
+                <div>
+                    <h2>Evaluation Telemetry</h2>
+                    <p class="panel-subtitle">Continuous measurement of Faithfulness, Context Relevance, Latency, and Estimated Token Costs.</p>
+                </div>
+                <button id="refresh-evals-btn" class="secondary-btn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+
+            <!-- Summary KPI Cards -->
+            <div class="kpi-grid">
+                <div class="kpi-card glass-panel">
+                    <span class="kpi-label">Avg. Faithfulness</span>
+                    <span class="kpi-val" id="kpi-faithfulness">0.88</span>
+                    <span class="kpi-sub text-emerald">Grounded attribution &ge; 0.80</span>
+                </div>
+                <div class="kpi-card glass-panel">
+                    <span class="kpi-label">Avg. Context Relevance</span>
+                    <span class="kpi-val" id="kpi-relevance">0.86</span>
+                    <span class="kpi-sub text-blue">Retrieved chunk precision</span>
+                </div>
+                <div class="kpi-card glass-panel">
+                    <span class="kpi-label">p50 Latency</span>
+                    <span class="kpi-val" id="kpi-latency">145ms</span>
+                    <span class="kpi-sub text-muted">End-to-end execution</span>
+                </div>
+                <div class="kpi-card glass-panel">
+                    <span class="kpi-label">Total Queries</span>
+                    <span class="kpi-val" id="kpi-queries">0</span>
+                    <span class="kpi-sub">Tracked in SQLite</span>
+                </div>
+                <div class="kpi-card glass-panel">
+                    <span class="kpi-label">Total Tokens</span>
+                    <span class="kpi-val" id="kpi-tokens">0</span>
+                    <span class="kpi-sub">Groq Llama 3.1 70B</span>
+                </div>
+                <div class="kpi-card glass-panel">
+                    <span class="kpi-label">Estimated Cost</span>
+                    <span class="kpi-val" id="kpi-cost">$0.00</span>
+                    <span class="kpi-sub">Real-time usage</span>
+                </div>
+            </div>
+
+            <!-- Recent Query Logs Table -->
+            <div class="table-card glass-panel">
+                <h3>Recent Query Execution Logs</h3>
+                <div class="table-wrap">
+                    <table class="eval-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Query</th>
+                                <th>Strategy</th>
+                                <th>Relevance</th>
+                                <th>Faithfulness</th>
+                                <th>Latency</th>
+                                <th>Tokens</th>
+                            </tr>
+                        </thead>
+                        <tbody id="eval-table-body">
+                            <tr>
+                                <td colspan="7" class="text-center text-muted">No query logs recorded yet. Run a query in the Playground.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Toast Notification Element -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
