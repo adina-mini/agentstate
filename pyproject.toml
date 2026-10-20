@@ -1,0 +1,57 @@
+[project]
+name = "agentgate"
+version = "0.1.0"
+description = "MCP-native knowledge gateway with multi-agent retrieval and eval dashboard"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Adina Rehman", email = "adinarehman018@gmail.com" }]
+
+dependencies = [
+    # MCP Server
+    "mcp>=1.0.0",
+
+    # LLM & Agents
+    "langgraph>=0.2.0",
+    "langchain-core>=0.3.0",
+    "langchain-groq>=0.2.0",
+
+    # Vector Store & Embeddings
+    "chromadb>=0.5.0",
+    "sentence-transformers>=3.0.0",
+
+    # Retrieval
+    "rank-bm25>=0.2.2",
+
+    # API
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "python-multipart>=0.0.9",
+
+    # HTTP Client (for GitHub connector)
+    "httpx>=0.27.0",
+
+    # Config & Utils
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "ruff>=0.6.0",
+]
+
+[project.scripts]
+agentgate-api = "agentgate.api.main:start"
+agentgate-mcp = "agentgate.mcp_server.server:main"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
