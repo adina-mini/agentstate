@@ -1,0 +1,5 @@
+"""Database package for AgentGate."""
+
+from agentgate.db.database import Database, get_db
+
+__all__ = ["Database", "get_db"]
