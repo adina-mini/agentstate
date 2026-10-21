@@ -1,3 +1,4 @@
+import os
 import time
 from typing import Any, Dict, List
 from agentgate.agents.state import AgentState
@@ -61,32 +62,60 @@ def synthesizer_node(state: AgentState) -> Dict[str, Any]:
     context_str = "\n\n".join(context_blocks)
     avg_score = sum(scores) / max(1, len(scores))
 
-    # Invoke LLM if Groq key exists
+    # Invoke LLM if Gemini or Groq key exists
     tokens_used = 0
     cost_usd = 0.0
-    if settings.groq_api_key:
+    gemini_key = settings.gemini_api_key or settings.google_api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    groq_key = settings.groq_api_key or os.environ.get("GROQ_API_KEY")
+
+    system_prompt = (
+        "You are AgentGate's Synthesizer Agent. Answer the user's question accurately using ONLY the provided sources.\n"
+        "RULES:\n"
+        "1. Cite sources inline using bracketed notation like [Source 1], [Source 2].\n"
+        "2. Do not invent facts not present in the sources.\n"
+        "3. If the sources do not provide sufficient information to answer fully, explicitly acknowledge the gaps."
+    )
+    user_prompt = f"Context Sources:\n{context_str}\n\nQuestion: {query}\n\nAnswer:"
+
+    # 1. Try Gemini first if key available
+    if gemini_key:
+        try:
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            from langchain_core.messages import SystemMessage, HumanMessage
+
+            model_name = settings.gemini_model if "gemini" in settings.gemini_model else "gemini-1.5-flash"
+            llm = ChatGoogleGenerativeAI(
+                model=model_name,
+                google_api_key=gemini_key,
+                temperature=settings.llm_temperature,
+            )
+            resp = llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)])
+            tokens_used = len(user_prompt.split()) + len(resp.content.split())
+            cost_usd = round((tokens_used / 1_000_000) * 0.075, 6)
+
+            return {
+                "answer": resp.content.strip(),
+                "citations": citations,
+                "confidence": round(min(1.0, max(0.1, avg_score * 1.1)), 3),
+                "llm_tokens_used": tokens_used,
+                "estimated_cost_usd": cost_usd,
+            }
+        except Exception as e:
+            print(f"[SynthesizerAgent] Gemini generation error: {e}")
+
+    # 2. Try Groq if key available
+    if groq_key:
         try:
             from langchain_groq import ChatGroq
             from langchain_core.messages import SystemMessage, HumanMessage
 
             llm = ChatGroq(
-                groq_api_key=settings.groq_api_key,
-                model_name=settings.llm_model,
+                groq_api_key=groq_key,
+                model_name=settings.groq_model or "llama-3.1-70b-versatile",
                 temperature=settings.llm_temperature,
             )
-            system_prompt = (
-                "You are AgentGate's Synthesizer Agent. Answer the user's question accurately using ONLY the provided sources.\n"
-                "RULES:\n"
-                "1. Cite sources inline using bracketed notation like [Source 1], [Source 2].\n"
-                "2. Do not invent facts not present in the sources.\n"
-                "3. If the sources do not provide sufficient information to answer fully, explicitly acknowledge the gaps."
-            )
-            user_prompt = f"Context Sources:\n{context_str}\n\nQuestion: {query}\n\nAnswer:"
             resp = llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)])
-
-            # Estimate tokens & cost
             tokens_used = len(user_prompt.split()) + len(resp.content.split())
-            # $0.59 per million tokens rough benchmark
             cost_usd = round((tokens_used / 1_000_000) * 0.59, 6)
 
             return {
@@ -97,7 +126,7 @@ def synthesizer_node(state: AgentState) -> Dict[str, Any]:
                 "estimated_cost_usd": cost_usd,
             }
         except Exception as e:
-            print(f"[SynthesizerAgent] LLM generation error: {e}, falling back to chunk excerpt synthesis")
+            print(f"[SynthesizerAgent] Groq generation error: {e}, falling back to chunk excerpt synthesis")
 
     # Fallback without LLM API key: synthesized excerpts
     fallback_answer = (
