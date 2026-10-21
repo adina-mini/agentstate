@@ -15,6 +15,7 @@ dependencies = [
     "langgraph>=0.2.0",
     "langchain-core>=0.3.0",
     "langchain-groq>=0.2.0",
+    "langchain-google-genai>=2.0.0",
 
     # Vector Store & Embeddings
     "chromadb>=0.5.0",
@@ -45,6 +46,7 @@ dev = [
 ]
 
 [project.scripts]
+agentgate = "agentgate.cli:main"
 agentgate-api = "agentgate.api.main:start"
 agentgate-mcp = "agentgate.mcp_server.server:main"
 
