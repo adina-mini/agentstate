@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  agentgate-api:
+    build: .
+    container_name: agentgate-api
+    ports:
+      - "8000:8000"
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - LLM_MODEL=llama-3.1-70b-versatile
+      - CHROMA_PERSIST_DIR=/app/data/chroma
+      - SQLITE_DB_PATH=/app/data/agentgate.db
+    volumes:
+      - agentgate_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  agentgate_data:
