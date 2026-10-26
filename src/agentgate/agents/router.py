@@ -29,17 +29,16 @@ def router_node(state: AgentState) -> Dict[str, Any]:
             )
             prompt = (
                 "You are an intent classifier for an enterprise knowledge retrieval system.\n"
-                "Classify the following query into exactly ONE category:\n"
-                "- knowledge_query: questions about code, documentation, APIs, architectures, guides, technical details.\n"
-                "- greeting: casual pleasantries or hellos.\n"
-                "- off_topic: unrelated queries that cannot be answered by documentation.\n"
+                "Classify the user's query into exactly ONE category:\n"
+                "- knowledge_query: ANY question asking for facts, company names, team members, summaries, documentation, code, architecture, guides, or content from connected files.\n"
+                "- greeting: casual pleasantries or hellos (e.g. 'hello', 'hi', 'hey there').\n"
+                "- off_topic: completely unrelated chit-chat, jokes, or creative writing having nothing to do with documents or information retrieval (e.g., 'tell me a joke', 'what is the weather').\n"
+                "When in doubt, always default to knowledge_query.\n"
                 "Respond with ONLY the category name and nothing else."
             )
             resp = llm.invoke([SystemMessage(content=prompt), HumanMessage(content=query)])
             classified = resp.content.strip().lower()
-            if "knowledge" in classified:
-                return {"intent": "knowledge_query"}
-            elif "greeting" in classified:
+            if "greeting" in classified and len(query.split()) <= 4:
                 return {"intent": "greeting"}
             elif "off_topic" in classified:
                 return {"intent": "off_topic"}
@@ -60,17 +59,16 @@ def router_node(state: AgentState) -> Dict[str, Any]:
             )
             prompt = (
                 "You are an intent classifier for an enterprise knowledge retrieval system.\n"
-                "Classify the following query into exactly ONE category:\n"
-                "- knowledge_query: questions about code, documentation, APIs, architectures, guides, technical details.\n"
-                "- greeting: casual pleasantries or hellos.\n"
-                "- off_topic: unrelated queries that cannot be answered by documentation.\n"
+                "Classify the user's query into exactly ONE category:\n"
+                "- knowledge_query: ANY question asking for facts, company names, team members, summaries, documentation, code, architecture, guides, or content from connected files.\n"
+                "- greeting: casual pleasantries or hellos (e.g. 'hello', 'hi', 'hey there').\n"
+                "- off_topic: completely unrelated chit-chat, jokes, or creative writing having nothing to do with documents or information retrieval (e.g., 'tell me a joke', 'what is the weather').\n"
+                "When in doubt, always default to knowledge_query.\n"
                 "Respond with ONLY the category name and nothing else."
             )
             resp = llm.invoke([SystemMessage(content=prompt), HumanMessage(content=query)])
             classified = resp.content.strip().lower()
-            if "knowledge" in classified:
-                return {"intent": "knowledge_query"}
-            elif "greeting" in classified:
+            if "greeting" in classified and len(query.split()) <= 4:
                 return {"intent": "greeting"}
             elif "off_topic" in classified:
                 return {"intent": "off_topic"}
