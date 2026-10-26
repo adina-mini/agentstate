@@ -15,9 +15,9 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     google_api_key: str = ""
     llm_provider: str = "gemini"  # "gemini" or "groq"
-    llm_model: str = "gemini-1.5-flash"  # default model
-    groq_model: str = "llama-3.1-70b-versatile"
-    gemini_model: str = "gemini-1.5-flash"
+    llm_model: str = "gemini-2.5-flash"  # default model
+    groq_model: str = "openai/gpt-oss-120b"
+    gemini_model: str = "gemini-2.5-flash"
     llm_temperature: float = 0.1
 
     # External APIs
