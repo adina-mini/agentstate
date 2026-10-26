@@ -17,15 +17,16 @@ def calculate_faithfulness(answer: str, context_chunks: List[str]) -> float:
 
     combined_context = " ".join(context_chunks)
 
-    # If Groq is available, run LLM-as-a-judge
-    if settings.groq_api_key:
+    # 1. Try Gemini judge first if key available
+    gemini_key = settings.gemini_api_key or settings.google_api_key
+    if gemini_key:
         try:
-            from langchain_groq import ChatGroq
+            from langchain_google_genai import ChatGoogleGenerativeAI
             from langchain_core.messages import SystemMessage, HumanMessage
 
-            llm = ChatGroq(
-                groq_api_key=settings.groq_api_key,
-                model_name=settings.llm_model,
+            llm = ChatGoogleGenerativeAI(
+                google_api_key=gemini_key,
+                model=settings.gemini_model or "gemini-2.5-flash",
                 temperature=0.0,
             )
             prompt = (
@@ -44,7 +45,36 @@ def calculate_faithfulness(answer: str, context_chunks: List[str]) -> float:
                 score = float(match.group(0))
                 return max(0.0, min(1.0, score))
         except Exception as e:
-            print(f"[EvalMetrics] LLM faithfulness check error: {e}")
+            print(f"[EvalMetrics] Gemini faithfulness check error: {e}")
+
+    # 2. Try Groq judge if key available
+    if settings.groq_api_key:
+        try:
+            from langchain_groq import ChatGroq
+            from langchain_core.messages import SystemMessage, HumanMessage
+
+            llm = ChatGroq(
+                groq_api_key=settings.groq_api_key,
+                model_name=settings.groq_model or "openai/gpt-oss-120b",
+                temperature=0.0,
+            )
+            prompt = (
+                "You are an impartial RAG evaluation judge. Evaluate the faithfulness of the answer based ONLY on the context.\n"
+                "Give a score between 0.0 and 1.0 where 1.0 means every claim is fully supported by the context, and 0.0 means completely hallucinated.\n"
+                "Output ONLY a single floating-point number between 0.0 and 1.0."
+            )
+            resp = llm.invoke(
+                [
+                    SystemMessage(content=prompt),
+                    HumanMessage(content=f"Context:\n{combined_context[:3000]}\n\nAnswer:\n{answer}"),
+                ]
+            )
+            match = re.search(r"\b0?\.\d+|\b1\.0|\b[01]\b", resp.content)
+            if match:
+                score = float(match.group(0))
+                return max(0.0, min(1.0, score))
+        except Exception as e:
+            print(f"[EvalMetrics] Groq faithfulness check error: {e}")
 
     # Deterministic fallback: claim token overlap ratio
     answer_tokens = tokenize_set(answer)
