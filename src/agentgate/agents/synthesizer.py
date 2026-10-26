@@ -79,54 +79,65 @@ def synthesizer_node(state: AgentState) -> Dict[str, Any]:
 
     # 1. Try Gemini first if key available
     if gemini_key:
-        try:
-            from langchain_google_genai import ChatGoogleGenerativeAI
-            from langchain_core.messages import SystemMessage, HumanMessage
+        candidate_models = [settings.gemini_model, "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-pro"]
+        tried_models = []
+        for model_name in candidate_models:
+            if not model_name or model_name in tried_models:
+                continue
+            tried_models.append(model_name)
+            try:
+                from langchain_google_genai import ChatGoogleGenerativeAI
+                from langchain_core.messages import SystemMessage, HumanMessage
 
-            model_name = settings.gemini_model if "gemini" in settings.gemini_model else "gemini-1.5-flash"
-            llm = ChatGoogleGenerativeAI(
-                model=model_name,
-                google_api_key=gemini_key,
-                temperature=settings.llm_temperature,
-            )
-            resp = llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)])
-            tokens_used = len(user_prompt.split()) + len(resp.content.split())
-            cost_usd = round((tokens_used / 1_000_000) * 0.075, 6)
+                llm = ChatGoogleGenerativeAI(
+                    model=model_name,
+                    google_api_key=gemini_key,
+                    temperature=settings.llm_temperature,
+                )
+                resp = llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)])
+                tokens_used = len(user_prompt.split()) + len(resp.content.split())
+                cost_usd = round((tokens_used / 1_000_000) * 0.075, 6)
 
-            return {
-                "answer": resp.content.strip(),
-                "citations": citations,
-                "confidence": round(min(1.0, max(0.1, avg_score * 1.1)), 3),
-                "llm_tokens_used": tokens_used,
-                "estimated_cost_usd": cost_usd,
-            }
-        except Exception as e:
-            print(f"[SynthesizerAgent] Gemini generation error: {e}")
+                return {
+                    "answer": resp.content.strip(),
+                    "citations": citations,
+                    "confidence": round(min(1.0, max(0.1, avg_score * 1.1)), 3),
+                    "llm_tokens_used": tokens_used,
+                    "estimated_cost_usd": cost_usd,
+                }
+            except Exception as e:
+                print(f"[SynthesizerAgent] Gemini model '{model_name}' error: {e}")
 
     # 2. Try Groq if key available
     if groq_key:
-        try:
-            from langchain_groq import ChatGroq
-            from langchain_core.messages import SystemMessage, HumanMessage
+        groq_candidates = [settings.groq_model, "openai/gpt-oss-120b", "qwen/qwen3.8-27b", "llama-3.3-70b-versatile"]
+        tried_groq = []
+        for g_model in groq_candidates:
+            if not g_model or g_model in tried_groq:
+                continue
+            tried_groq.append(g_model)
+            try:
+                from langchain_groq import ChatGroq
+                from langchain_core.messages import SystemMessage, HumanMessage
 
-            llm = ChatGroq(
-                groq_api_key=groq_key,
-                model_name=settings.groq_model or "llama-3.1-70b-versatile",
-                temperature=settings.llm_temperature,
-            )
-            resp = llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)])
-            tokens_used = len(user_prompt.split()) + len(resp.content.split())
-            cost_usd = round((tokens_used / 1_000_000) * 0.59, 6)
+                llm = ChatGroq(
+                    groq_api_key=groq_key,
+                    model_name=g_model,
+                    temperature=settings.llm_temperature,
+                )
+                resp = llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)])
+                tokens_used = len(user_prompt.split()) + len(resp.content.split())
+                cost_usd = round((tokens_used / 1_000_000) * 0.59, 6)
 
-            return {
-                "answer": resp.content.strip(),
-                "citations": citations,
-                "confidence": round(min(1.0, max(0.1, avg_score * 1.1)), 3),
-                "llm_tokens_used": tokens_used,
-                "estimated_cost_usd": cost_usd,
-            }
-        except Exception as e:
-            print(f"[SynthesizerAgent] Groq generation error: {e}, falling back to chunk excerpt synthesis")
+                return {
+                    "answer": resp.content.strip(),
+                    "citations": citations,
+                    "confidence": round(min(1.0, max(0.1, avg_score * 1.1)), 3),
+                    "llm_tokens_used": tokens_used,
+                    "estimated_cost_usd": cost_usd,
+                }
+            except Exception as e:
+                print(f"[SynthesizerAgent] Groq model '{g_model}' error: {e}")
 
     # Fallback without LLM API key: synthesized excerpts
     fallback_answer = (
@@ -134,7 +145,7 @@ def synthesizer_node(state: AgentState) -> Dict[str, Any]:
     )
     for idx, c in enumerate(chunks, start=1):
         snippet = c.get("content", "")[:250].strip()
-        fallback_answer += f"• **[Source {idx}]** ({c.get('source_title', 'Doc')}): \"{snippet}...\"\n\n"
+        fallback_answer += f"- **[Source {idx}]** ({c.get('source_title', 'Doc')}): \"{snippet}...\"\n\n"
 
     return {
         "answer": fallback_answer.strip(),
