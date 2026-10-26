@@ -25,3 +25,12 @@ async def get_strategy_comparison(
     """Executes live side-by-side comparison between Dense, Sparse, and Hybrid retrieval."""
     benchmark = await run_strategy_benchmark(sample_query=query)
     return benchmark
+
+
+@router.post("/benchmark")
+@router.post("/comparison")
+async def post_strategy_benchmark(payload: dict):
+    """Executes live side-by-side comparison via POST body."""
+    query = payload.get("query", "How is authentication and rate limiting configured?")
+    benchmark = await run_strategy_benchmark(sample_query=query)
+    return benchmark
