@@ -45,9 +45,11 @@ class DenseRetriever:
         metadatas = [
             {
                 "document_id": c.document_id,
+                "source_id": c.source_id or str(c.metadata.get("source_id", "")),
                 "chunk_index": c.chunk_index,
                 "source_title": c.source_title,
                 "source_url": c.source_url or "",
+                "meta_source_id": c.source_id or str(c.metadata.get("source_id", "")),
                 **{f"meta_{k}": str(v) for k, v in c.metadata.items()},
             }
             for c in chunks
@@ -129,11 +131,53 @@ class DenseRetriever:
 
     def delete_by_source(self, source_id: str) -> None:
         """Deletes chunks matching a document/source prefix."""
-        # Chroma where filter
-        try:
-            self.collection.delete(where={"meta_source_id": source_id})
-        except Exception:
-            pass
+        for key in ["source_id", "meta_source_id"]:
+            try:
+                self.collection.delete(where={key: source_id})
+            except Exception:
+                pass
+
+    def get_chunks_by_source(self, source_id: str, limit: int = 20) -> List[Chunk]:
+        """Fetches stored chunks belonging to a specific source."""
+        count = self.collection.count()
+        if count == 0:
+            return []
+
+        # Try retrieving by source_id where filter
+        results = None
+        for key in ["source_id", "meta_source_id"]:
+            try:
+                res = self.collection.get(
+                    where={key: source_id},
+                    limit=limit,
+                    include=["documents", "metadatas"],
+                )
+                if res and res.get("ids"):
+                    results = res
+                    break
+            except Exception:
+                continue
+
+        if not results or not results.get("ids"):
+            return []
+
+        chunks: List[Chunk] = []
+        for idx, cid in enumerate(results["ids"]):
+            content = results["documents"][idx] if results.get("documents") else ""
+            meta = results["metadatas"][idx] if results.get("metadatas") else {}
+            chunks.append(
+                Chunk(
+                    id=cid,
+                    document_id=meta.get("document_id", ""),
+                    source_id=meta.get("source_id", source_id),
+                    content=content,
+                    chunk_index=int(meta.get("chunk_index", 0)),
+                    source_title=meta.get("source_title", "Document"),
+                    source_url=meta.get("source_url") or None,
+                    metadata=meta,
+                )
+            )
+        return chunks
 
     def count(self) -> int:
         return self.collection.count()
