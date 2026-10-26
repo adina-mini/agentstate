@@ -29,6 +29,9 @@ dependencies = [
     "uvicorn[standard]>=0.30.0",
     "python-multipart>=0.0.9",
 
+    # Document Parsers
+    "pypdf>=5.0.0",
+
     # HTTP Client (for GitHub connector)
     "httpx>=0.27.0",
 
