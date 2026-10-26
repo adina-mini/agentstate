@@ -391,11 +391,28 @@
                     <!-- File Upload Form -->
                     <form id="file-form" class="modal-form hidden">
                         <div class="form-group">
-                            <label for="doc-file-input">Select Markdown or Text Document:</label>
-                            <input type="file" id="doc-file-input" accept=".md,.markdown,.txt" required>
+                            <label for="doc-file-input">Select Document (PDF, Markdown, Text):</label>
+                            <input type="file" id="doc-file-input" accept=".pdf,.md,.markdown,.txt,.json,.csv,.py" required>
+                            <p class="form-hint">Supports PDF documents (.pdf), Markdown (.md), and plain text files. PDFs are automatically parsed page-by-page.</p>
                         </div>
                         <button type="submit" id="submit-file-btn" class="primary-btn full-width">Upload & Index Document</button>
                     </form>
+                </div>
+            </div>
+
+            <!-- Source Inspection Modal -->
+            <div id="source-details-modal" class="modal-backdrop hidden">
+                <div class="modal-box modal-box-lg glass-panel">
+                    <div class="modal-header">
+                        <div>
+                            <h3 id="inspect-source-title">Source Details</h3>
+                            <p class="modal-subtitle" id="inspect-source-subtitle">Metadata and indexed chunk previews</p>
+                        </div>
+                        <button id="close-details-modal-btn" class="close-icon-btn">&times;</button>
+                    </div>
+                    <div class="modal-body" id="inspect-source-body">
+                        <!-- Populated dynamically by app.js -->
+                    </div>
                 </div>
             </div>
 
