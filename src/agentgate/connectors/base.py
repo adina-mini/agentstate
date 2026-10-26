@@ -17,6 +17,7 @@ class Document(BaseModel):
 class Chunk(BaseModel):
     id: str = Field(description="Unique chunk ID")
     document_id: str = Field(description="Parent document ID")
+    source_id: str = Field(default="", description="Parent source ID")
     content: str = Field(description="Chunk text snippet")
     chunk_index: int = Field(description="Index order of this chunk")
     source_title: str = Field(description="Source title")
@@ -34,6 +35,12 @@ def chunk_document(
     if not text:
         return []
 
+    base_metadata = {
+        "source_id": doc.source_id,
+        "source_type": doc.source_type,
+        **doc.metadata,
+    }
+
     words = text.split()
     if len(words) <= chunk_size:
         chunk_id = hashlib.md5(f"{doc.id}_0".encode()).hexdigest()
@@ -41,11 +48,12 @@ def chunk_document(
             Chunk(
                 id=chunk_id,
                 document_id=doc.id,
+                source_id=doc.source_id,
                 content=text,
                 chunk_index=0,
                 source_title=doc.title,
                 source_url=doc.url,
-                metadata=doc.metadata,
+                metadata=base_metadata,
             )
         ]
 
@@ -63,11 +71,12 @@ def chunk_document(
             Chunk(
                 id=chunk_id,
                 document_id=doc.id,
+                source_id=doc.source_id,
                 content=chunk_text,
                 chunk_index=idx,
                 source_title=doc.title,
                 source_url=doc.url,
-                metadata={**doc.metadata, "word_count": len(chunk_words)},
+                metadata={**base_metadata, "word_count": len(chunk_words)},
             )
         )
         idx += 1
