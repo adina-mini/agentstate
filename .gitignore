@@ -36,6 +36,7 @@ venv.bak/
 
 # Local data & vector store
 data/
+scratch/
 *.db
 *.sqlite3
 chroma/
