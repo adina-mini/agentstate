@@ -62,6 +62,11 @@ document.addEventListener('DOMContentLoaded', () => {
         seedSampleBtn: document.getElementById('seed-sample-btn'),
         sourceModal: document.getElementById('source-modal'),
         closeModalBtn: document.getElementById('close-modal-btn'),
+        sourceDetailsModal: document.getElementById('source-details-modal'),
+        closeDetailsModalBtn: document.getElementById('close-details-modal-btn'),
+        inspectSourceTitle: document.getElementById('inspect-source-title'),
+        inspectSourceSubtitle: document.getElementById('inspect-source-subtitle'),
+        inspectSourceBody: document.getElementById('inspect-source-body'),
         modalTabGithub: document.getElementById('modal-tab-github'),
         modalTabFile: document.getElementById('modal-tab-file'),
         githubForm: document.getElementById('github-form'),
@@ -69,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ghRepoInput: document.getElementById('gh-repo-input'),
         ghTokenInput: document.getElementById('gh-token-input'),
         docFileInput: document.getElementById('doc-file-input'),
+        submitFileBtn: document.getElementById('submit-file-btn'),
 
         // MCP
         copyClaudeConfigBtn: document.getElementById('copy-claude-config-btn'),
@@ -337,6 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Knowledge Sources
     function setupSources() {
+        // Open/Close Add Source Modal
         elements.addSourceBtn.addEventListener('click', () => {
             elements.sourceModal.classList.remove('hidden');
         });
@@ -345,6 +352,28 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.sourceModal.classList.add('hidden');
         });
 
+        // Close on backdrop click
+        elements.sourceModal.addEventListener('click', (e) => {
+            if (e.target === elements.sourceModal) {
+                elements.sourceModal.classList.add('hidden');
+            }
+        });
+
+        // Close Details Modal
+        if (elements.closeDetailsModalBtn) {
+            elements.closeDetailsModalBtn.addEventListener('click', () => {
+                elements.sourceDetailsModal.classList.add('hidden');
+            });
+        }
+        if (elements.sourceDetailsModal) {
+            elements.sourceDetailsModal.addEventListener('click', (e) => {
+                if (e.target === elements.sourceDetailsModal) {
+                    elements.sourceDetailsModal.classList.add('hidden');
+                }
+            });
+        }
+
+        // Tab Switching in Modal
         elements.modalTabGithub.addEventListener('click', () => {
             elements.modalTabGithub.classList.add('active');
             elements.modalTabFile.classList.remove('active');
@@ -374,36 +403,63 @@ document.addEventListener('DOMContentLoaded', () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ repo, token }),
                 });
-                if (!res.ok) throw new Error('GitHub sync failed');
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.detail || 'GitHub sync failed');
+                }
                 showToast(`Repository ${repo} indexed successfully!`);
+                elements.ghRepoInput.value = '';
                 loadSources();
             } catch (err) {
                 showToast(`Error: ${err.message}`);
             }
         });
 
-        // File Form Submit
+        // File Form Submit (PDF, Markdown, Text)
         elements.fileForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const file = elements.docFileInput.files[0];
-            if (!file) return;
+            if (!file) {
+                showToast('Please select a document file to upload.');
+                return;
+            }
+
+            const isPdf = file.name.toLowerCase().endsWith('.pdf');
+            showToast(`Uploading and indexing ${file.name}${isPdf ? ' (extracting pages)' : ''}...`);
+
+            if (elements.submitFileBtn) {
+                elements.submitFileBtn.disabled = true;
+                elements.submitFileBtn.innerHTML = `
+                    <div class="spinner" style="width:14px;height:14px;margin:0 6px 0 0;display:inline-block;border-width:2px;"></div>
+                    <span>Indexing Document...</span>
+                `;
+            }
 
             const formData = new FormData();
             formData.append('file', file);
-
-            showToast(`Uploading ${file.name}...`);
-            elements.sourceModal.classList.add('hidden');
 
             try {
                 const res = await fetch('/api/sources/upload', {
                     method: 'POST',
                     body: formData,
                 });
-                if (!res.ok) throw new Error('Upload failed');
-                showToast(`Document ${file.name} indexed successfully!`);
+
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.detail || 'Upload failed');
+                }
+
+                showToast(`Document "${file.name}" indexed successfully!`);
+                elements.sourceModal.classList.add('hidden');
+                elements.docFileInput.value = '';
                 loadSources();
             } catch (err) {
-                showToast(`Error: ${err.message}`);
+                showToast(`Upload failed: ${err.message}`);
+            } finally {
+                if (elements.submitFileBtn) {
+                    elements.submitFileBtn.disabled = false;
+                    elements.submitFileBtn.innerHTML = 'Upload & Index Document';
+                }
             }
         });
 
@@ -439,8 +495,8 @@ document.addEventListener('DOMContentLoaded', () => {
             renderSources(sources);
         } catch (err) {
             elements.sourcesGrid.innerHTML = `
-                <div class="empty-state glass-panel" style="grid-column: 1 / -1; text-align: center;">
-                    <p class="text-muted">Unable to load sources. Ensure the backend server is running.</p>
+                <div class="empty-state glass-panel" style="grid-column: 1 / -1; text-align: center; padding: 2rem;">
+                    <p class="text-muted">Unable to load sources: ${escapeHtml(err.message)}</p>
                 </div>
             `;
         }
@@ -448,10 +504,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderSources(sources) {
         elements.sourcesGrid.innerHTML = '';
-        if (sources.length === 0) {
+        if (!sources || sources.length === 0) {
             elements.sourcesGrid.innerHTML = `
-                <div class="empty-state glass-panel" style="grid-column: 1 / -1; text-align: center;">
-                    <p class="text-muted">No knowledge sources connected yet. Click <strong>Seed Demo Specs</strong> or <strong>Connect New Source</strong> to begin.</p>
+                <div class="empty-state glass-panel" style="grid-column: 1 / -1; text-align: center; padding: 2.5rem;">
+                    <p class="text-muted">No knowledge sources connected yet. Click <strong>Load Sample Specs</strong> or <strong>Connect Source</strong> above to begin.</p>
                 </div>
             `;
             return;
@@ -460,28 +516,89 @@ document.addEventListener('DOMContentLoaded', () => {
         sources.forEach(src => {
             const card = document.createElement('div');
             card.className = 'source-card glass-panel';
-            const dateStr = src.last_synced_at ? new Date(src.last_synced_at).toLocaleDateString() : 'Just now';
+
+            const rawType = (src.type || src.source_type || 'upload').toLowerCase();
+            let typeBadgeClass = 'badge-cyan';
+            let typeLabel = 'DOCUMENT';
+
+            if (rawType === 'github') {
+                typeBadgeClass = 'badge-purple';
+                typeLabel = 'GITHUB';
+            } else if (rawType === 'markdown') {
+                typeBadgeClass = 'badge-amber';
+                typeLabel = 'MARKDOWN';
+            } else if (rawType === 'pdf' || (src.config && src.config.filename && src.config.filename.endsWith('.pdf'))) {
+                typeBadgeClass = 'badge-blue';
+                typeLabel = 'PDF';
+            }
+
+            const timestamp = src.last_synced || src.last_synced_at || src.created_at;
+            const dateStr = timestamp ? new Date(timestamp).toLocaleString(undefined, {
+                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+            }) : 'Just now';
+
+            const docCount = src.doc_count || (src.config && src.config.chunks_indexed) || 1;
+            const filenameOrRepo = src.config?.filename || src.config?.repo || src.id;
 
             card.innerHTML = `
                 <div>
                     <div class="source-header">
-                        <span class="source-title">${escapeHtml(src.name)}</span>
-                        <span class="badge badge-${src.source_type === 'github' ? 'purple' : 'cyan'}">${src.source_type.toUpperCase()}</span>
+                        <span class="source-title" title="${escapeHtml(src.name)}">${escapeHtml(src.name)}</span>
+                        <span class="badge ${typeBadgeClass}">${typeLabel}</span>
                     </div>
                     <div class="source-info">
-                        <p><strong>Documents:</strong> ${src.doc_count || 1}</p>
-                        <p><strong>Status:</strong> ${src.status || 'synced'}</p>
+                        <p><strong>Path / Repo:</strong> <code>${escapeHtml(filenameOrRepo)}</code></p>
+                        <p><strong>Items Indexed:</strong> ${docCount} ${typeLabel === 'GITHUB' ? 'docs' : 'chunk(s)'}</p>
+                        <p><strong>Status:</strong> <span class="badge badge-emerald" style="padding:0.1rem 0.4rem;font-size:0.65rem;">Active (${src.status || 'synced'})</span></p>
                         <p><strong>Last Sync:</strong> ${dateStr}</p>
                     </div>
                 </div>
                 <div class="source-footer">
-                    <span class="badge badge-emerald">Active</span>
-                    <button class="delete-btn" data-id="${src.id}">Disconnect</button>
+                    <span class="badge badge-emerald" style="font-size:0.7rem;">Synced</span>
+                    <div class="source-actions">
+                        <button class="action-icon-btn inspect-btn" data-id="${src.id}" title="View indexed chunks">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            Details
+                        </button>
+                        <button class="action-icon-btn query-btn" data-id="${src.id}" data-name="${escapeHtml(src.name)}" title="Query this source in playground">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                            </svg>
+                            Ask
+                        </button>
+                        <button class="action-icon-btn delete-btn" data-id="${src.id}" title="Remove and purge vector embeddings">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            </svg>
+                            Delete
+                        </button>
+                    </div>
                 </div>
             `;
 
+            // Inspect Button
+            card.querySelector('.inspect-btn').addEventListener('click', () => {
+                inspectSource(src.id);
+            });
+
+            // Query in Playground Button
+            card.querySelector('.query-btn').addEventListener('click', () => {
+                const searchPrompt = `What does ${src.name.replace('File: ', '')} cover? Summarize its key details.`;
+                elements.queryInput.value = searchPrompt;
+                // Switch to Playground tab
+                const playgroundTabBtn = document.getElementById('tab-playground-btn');
+                if (playgroundTabBtn) playgroundTabBtn.click();
+                elements.queryInput.focus();
+                showToast(`Prompt set for ${src.name}. Click Submit Query to execute.`);
+            });
+
+            // Delete Button
             card.querySelector('.delete-btn').addEventListener('click', async () => {
-                if (confirm(`Disconnect and remove source "${src.name}"?`)) {
+                if (confirm(`Disconnect and purge source "${src.name}"?\n\nThis will remove its vector embeddings from ChromaDB and BM25 index.`)) {
                     await deleteSource(src.id);
                 }
             });
@@ -490,11 +607,75 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    async function inspectSource(sourceId) {
+        if (!elements.sourceDetailsModal) return;
+
+        elements.inspectSourceTitle.textContent = 'Loading source details...';
+        elements.inspectSourceSubtitle.textContent = `ID: ${sourceId}`;
+        elements.inspectSourceBody.innerHTML = `
+            <div class="loading-spinner-wrap">
+                <div class="spinner"></div>
+                <p>Retrieving chunks and metadata from ChromaDB...</p>
+            </div>
+        `;
+        elements.sourceDetailsModal.classList.remove('hidden');
+
+        try {
+            const res = await fetch(`/api/sources/${sourceId}`);
+            if (!res.ok) throw new Error('Source details could not be retrieved');
+            const data = await res.json();
+
+            elements.inspectSourceTitle.textContent = data.name || 'Source Details';
+            elements.inspectSourceSubtitle.textContent = `Type: ${(data.type || '').toUpperCase()} | ID: ${data.id}`;
+
+            const chunks = data.preview_chunks || [];
+            let chunksHtml = '';
+
+            if (chunks.length === 0) {
+                chunksHtml = '<p class="text-muted">No chunks found stored in vector database for this source.</p>';
+            } else {
+                chunksHtml = `
+                    <div class="chunk-preview-list">
+                        ${chunks.map((c, i) => `
+                            <div class="chunk-preview-card">
+                                <div class="chunk-preview-header">
+                                    <span>Chunk #${c.chunk_index !== undefined ? c.chunk_index : i}</span>
+                                    <code>${escapeHtml(c.id.substring(0, 12))}...</code>
+                                </div>
+                                <div class="chunk-preview-content">${escapeHtml(c.content)}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            elements.inspectSourceBody.innerHTML = `
+                <div class="source-info" style="margin-bottom: 1rem;">
+                    <p><strong>Status:</strong> ${escapeHtml(data.status || 'synced')}</p>
+                    <p><strong>Total Chunks / Docs:</strong> ${data.doc_count || chunks.length}</p>
+                    <p><strong>Last Sync:</strong> ${data.last_synced || data.created_at || 'N/A'}</p>
+                    <p><strong>Config:</strong> <code>${JSON.stringify(data.config || {})}</code></p>
+                </div>
+                <h4 style="font-size:0.95rem;font-weight:600;color:var(--primary);margin-bottom:0.5rem;">
+                    Indexed Vector Chunks (${chunks.length} sample${chunks.length === 1 ? '' : 's'})
+                </h4>
+                ${chunksHtml}
+            `;
+        } catch (err) {
+            elements.inspectSourceBody.innerHTML = `
+                <p class="text-muted" style="color:var(--accent-rose);">Error: ${escapeHtml(err.message)}</p>
+            `;
+        }
+    }
+
     async function deleteSource(sourceId) {
         try {
             const res = await fetch(`/api/sources/${sourceId}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error('Failed to delete source');
-            showToast('Source removed.');
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.detail || 'Failed to delete source');
+            }
+            showToast('Source removed and vectors purged.');
             loadSources();
         } catch (err) {
             showToast(`Error: ${err.message}`);
