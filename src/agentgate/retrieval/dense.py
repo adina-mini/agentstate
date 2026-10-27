@@ -1,7 +1,6 @@
 from typing import Any, Dict, List, Optional, Tuple
 import chromadb
 from chromadb.config import Settings as ChromaSettings
-from sentence_transformers import SentenceTransformer
 
 from agentgate.config import settings
 from agentgate.connectors.base import Chunk
@@ -28,11 +27,12 @@ class DenseRetriever:
             name=collection_name,
             metadata={"description": "AgentGate dense knowledge vectors"},
         )
-        self._model: Optional[SentenceTransformer] = None
+        self._model: Optional[Any] = None
 
     @property
-    def model(self) -> SentenceTransformer:
+    def model(self):
         if self._model is None:
+            from sentence_transformers import SentenceTransformer
             self._model = SentenceTransformer(self.model_name)
         return self._model
 
