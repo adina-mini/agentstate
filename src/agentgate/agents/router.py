@@ -15,6 +15,12 @@ def router_node(state: AgentState) -> Dict[str, Any]:
     if clean_lower in GREETING_WORDS or len(clean_lower.split()) <= 2 and any(w in clean_lower for w in GREETING_WORDS):
         return {"intent": "greeting"}
 
+    # Fast-track: Standard questions or multi-word queries bypass router LLM call for instant <1ms routing
+    question_triggers = {"what", "who", "where", "when", "why", "how", "which", "can", "is", "are", "do", "does", "explain", "tell", "show", "describe", "list", "summarize"}
+    words = clean_lower.split()
+    if words and (words[0] in question_triggers or len(words) >= 3):
+        return {"intent": "knowledge_query"}
+
     # Check Gemini first
     gemini_key = settings.gemini_api_key or settings.google_api_key
     if gemini_key:
