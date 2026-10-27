@@ -69,22 +69,23 @@ def synthesizer_node(state: AgentState) -> Dict[str, Any]:
     groq_key = settings.groq_api_key or os.environ.get("GROQ_API_KEY")
 
     system_prompt = (
-        "You are AgentGate's Synthesizer Agent. Answer the user's question accurately using ONLY the provided sources.\n"
-        "RULES:\n"
-        "1. Cite sources inline using bracketed notation like [Source 1], [Source 2].\n"
-        "2. Do not invent facts not present in the sources.\n"
-        "3. If the sources do not provide sufficient information to answer fully, explicitly acknowledge the gaps."
+        "You are AgentGate's Synthesizer Agent. Answer the user's question directly, clearly, and naturally using ONLY the provided context sources.\n"
+        "STYLE GUIDELINES:\n"
+        "1. Write in natural, fluid, clean prose. Avoid robotic, overly rigid bullet points.\n"
+        "2. Do NOT spam bold asterisks (**) around every skill, name, or word. Keep the text clean and readable.\n"
+        "3. Cite sources cleanly using [Source 1], [Source 2] at the end of key statements.\n"
+        "4. Be concise and helpful. Never invent facts not present in the sources."
     )
     user_prompt = f"Context Sources:\n{context_str}\n\nQuestion: {query}\n\nAnswer:"
 
     # 1. Try Gemini first if key available
     if gemini_key:
-        candidate_models = [settings.gemini_model, "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-pro"]
-        tried_models = []
+        candidate_models = [settings.gemini_model or "gemini-2.5-flash", "gemini-2.5-flash"]
+        tried_models = set()
         for model_name in candidate_models:
             if not model_name or model_name in tried_models:
                 continue
-            tried_models.append(model_name)
+            tried_models.add(model_name)
             try:
                 from langchain_google_genai import ChatGoogleGenerativeAI
                 from langchain_core.messages import SystemMessage, HumanMessage
@@ -92,7 +93,9 @@ def synthesizer_node(state: AgentState) -> Dict[str, Any]:
                 llm = ChatGoogleGenerativeAI(
                     model=model_name,
                     google_api_key=gemini_key,
-                    temperature=settings.llm_temperature,
+                    temperature=0.2,
+                    request_timeout=8.0,
+                    max_retries=1,
                 )
                 resp = llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)])
                 tokens_used = len(user_prompt.split()) + len(resp.content.split())
