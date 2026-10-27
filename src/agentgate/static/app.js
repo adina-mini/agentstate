@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.resConfidenceFill.style.width = `${confPct}%`;
 
         // Answer
-        elements.resAnswerText.textContent = data.answer;
+        elements.resAnswerText.innerHTML = formatMarkdown(data.answer);
 
         // Citations
         const citations = data.citations || [];
@@ -742,6 +742,51 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             console.warn('Evals fetch warning:', err);
         }
+    }
+
+    function formatMarkdown(text) {
+        if (!text) return '';
+        let escaped = escapeHtml(text);
+
+        // Replace bold **text** with clean strong tags
+        escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+        // Replace italic *text* with em tags
+        escaped = escaped.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+
+        // Replace inline code `code`
+        escaped = escaped.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+
+        // Format citations [Source X] or 【Source X】 into clean styled badges
+        escaped = escaped.replace(/[\[【]Source\s*(\d+)[\]】]/gi, '<span class="inline-citation">Source $1</span>');
+
+        // Convert bullet points and clean paragraphs
+        const lines = escaped.split('\n');
+        let inList = false;
+        const htmlLines = [];
+
+        for (let line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('- ') || trimmed.startsWith('• ') || trimmed.startsWith('* ')) {
+                if (!inList) {
+                    htmlLines.push('<ul class="answer-list">');
+                    inList = true;
+                }
+                htmlLines.push(`<li>${trimmed.substring(2)}</li>`);
+            } else {
+                if (inList) {
+                    htmlLines.push('</ul>');
+                    inList = false;
+                }
+                if (trimmed) {
+                    htmlLines.push(`<p class="answer-para">${line}</p>`);
+                }
+            }
+        }
+        if (inList) {
+            htmlLines.push('</ul>');
+        }
+        return htmlLines.join('');
     }
 
     function escapeHtml(str) {
