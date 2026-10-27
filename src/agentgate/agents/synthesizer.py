@@ -94,7 +94,7 @@ def synthesizer_node(state: AgentState) -> Dict[str, Any]:
                     model=model_name,
                     google_api_key=gemini_key,
                     temperature=0.2,
-                    request_timeout=8.0,
+                    request_timeout=15.0,
                     max_retries=1,
                 )
                 resp = llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)])
