@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from agentgate.agents.graph import execute_agent_query
 from agentgate.api.models import QueryRequest, QueryResponse
 from agentgate.evals.tracker import get_eval_tracker
@@ -7,7 +7,7 @@ router = APIRouter(prefix="/query", tags=["Query"])
 
 
 @router.post("", response_model=QueryResponse)
-async def query_knowledge_base(request: QueryRequest):
+async def query_knowledge_base(request: QueryRequest, background_tasks: BackgroundTasks):
     """Executes the multi-agent retrieval and synthesis graph, logging eval metrics."""
     try:
         result = await execute_agent_query(
@@ -16,9 +16,10 @@ async def query_knowledge_base(request: QueryRequest):
             top_k=request.top_k,
         )
 
-        # Track query in eval database
+        # Track query in eval database asynchronously in background
         tracker = get_eval_tracker()
-        tracker.record_query(
+        background_tasks.add_task(
+            tracker.record_query,
             query=request.query,
             strategy=request.strategy,
             answer=result.get("answer", ""),
