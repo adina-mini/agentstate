@@ -28,6 +28,8 @@ def calculate_faithfulness(answer: str, context_chunks: List[str]) -> float:
                 google_api_key=gemini_key,
                 model=settings.gemini_model or "gemini-2.5-flash",
                 temperature=0.0,
+                request_timeout=15.0,
+                max_retries=1,
             )
             prompt = (
                 "You are an impartial RAG evaluation judge. Evaluate the faithfulness of the answer based ONLY on the context.\n"
@@ -57,6 +59,8 @@ def calculate_faithfulness(answer: str, context_chunks: List[str]) -> float:
                 groq_api_key=settings.groq_api_key,
                 model_name=settings.groq_model or "openai/gpt-oss-120b",
                 temperature=0.0,
+                request_timeout=5.0,
+                max_retries=1,
             )
             prompt = (
                 "You are an impartial RAG evaluation judge. Evaluate the faithfulness of the answer based ONLY on the context.\n"
